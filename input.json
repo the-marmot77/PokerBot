@@ -1,0 +1,18 @@
+{
+    "players": [
+      {
+        "name": "You",
+        "cards": ["as", "qs"]
+      },
+      {
+        "name": "Opponent1",
+        "cards": []
+      },
+      {
+        "name": "Opponent2",
+        "cards": []
+      }
+    ],
+    "community_cards": ["4s", "4h", "10s"]
+  }
+  
