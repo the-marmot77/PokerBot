@@ -1,63 +1,69 @@
 import pyautogui
-from PIL import Image
-import os
-import time
+from PIL import Image, ImageOps
+import pytesseract
 
-# Define a directory to save screenshots (temporary storage)
-SCREENSHOT_DIR = "screenshots"
-os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+# Configure Tesseract executable path
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-def capture_screen(region=None):
+def capture_player_cards():
     """
-    Capture a screenshot of the screen or a specific region.
-    
-    Args:
-        region (tuple): A 4-tuple (left, top, width, height) for the region to capture.
-                        If None, captures the entire screen.
-    
+    Capture the region where the player's cards are located and extract text.
     Returns:
-        Image: The captured screenshot as a PIL Image object.
+        str: Extracted text representing the player's cards.
     """
-    screenshot = pyautogui.screenshot(region=region)
-    return screenshot
+    # Define the region for player's cards (x, y, width, height)
+    left = 1200
+    top = 980
+    width = 200
+    height = 120
 
-def save_and_delete_screenshot(image, filename="screenshot.png", delay=5):
-    """
-    Save a screenshot temporarily and then delete it after a delay.
+    print(f"Capturing player cards from region: ({left}, {top}, {width}, {height})")
+    # Capture a screenshot of the card region
+    screenshot = pyautogui.screenshot(region=(left, top, width, height))
     
+    # Save the raw region for debugging
+    raw_image_path = "debug_raw_card_region.png"
+    screenshot.save(raw_image_path)
+    print(f"Raw screenshot saved to '{raw_image_path}' for verification.")
+    
+    # Preprocess the image
+    processed_image = preprocess_image(screenshot)
+    
+    # Save the preprocessed region for debugging
+    processed_image_path = "debug_preprocessed_card_region.png"
+    processed_image.save(processed_image_path)
+    print(f"Preprocessed screenshot saved to '{processed_image_path}' for verification.")
+    
+    # Use Tesseract to extract text
+    print("Extracting text from the card region...")
+    custom_config = r'-c tessedit_char_whitelist=AKQJ1098765432♠♥♦♣ --psm 6'
+    card_text = pytesseract.image_to_string(processed_image, config=custom_config)
+    
+    return card_text.strip()
+
+def preprocess_image(image):
+    """
+    Preprocess the image to enhance OCR accuracy.
     Args:
-        image (Image): The PIL Image object to save.
-        filename (str): The name of the file to save the image as.
-        delay (int): The number of seconds to wait before deleting the file.
+        image (Image): The PIL Image object to preprocess.
+    Returns:
+        Image: The preprocessed image.
     """
-    filepath = os.path.join(SCREENSHOT_DIR, filename)
+    print("Preprocessing the image...")
+    # Convert to grayscale
+    grayscale = ImageOps.grayscale(image)
     
-    # Save the image
-    image.save(filepath)
-    print(f"Screenshot temporarily saved to {filepath}")
-
-    # Wait before deleting
-    print(f"Waiting {delay} seconds before deleting the screenshot...")
-    time.sleep(delay)
-
-    # Delete the file
-    if os.path.exists(filepath):
-        os.remove(filepath)
-        print(f"Screenshot deleted: {filepath}")
-    else:
-        print(f"Failed to delete {filepath}: File does not exist")
+    # Resize for better OCR (optional, doubles the size)
+    resized = grayscale.resize((grayscale.width * 2, grayscale.height * 2), Image.Resampling.LANCZOS)
+    
+    # Apply binary thresholding
+    processed = resized.point(lambda x: 0 if x < 128 else 255, '1')
+    return processed
 
 def main():
-    # Capture the entire screen
-    print("Capturing the entire screen...")
-    full_screenshot = capture_screen()
-    save_and_delete_screenshot(full_screenshot, "full_screenshot.png", delay=5)
-
-    # Example: Capture a specific region (e.g., top-left corner of 300x300 pixels)
-    region = (0, 0, 300, 300)
-    print(f"Capturing a region: {region}")
-    region_screenshot = capture_screen(region)
-    save_and_delete_screenshot(region_screenshot, "region_screenshot.png", delay=5)
+    # Capture and extract your cards
+    player_cards = capture_player_cards()
+    print(f"Your Cards: {player_cards}")
 
 if __name__ == "__main__":
     main()
