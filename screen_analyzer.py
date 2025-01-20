@@ -1,69 +1,82 @@
 import pyautogui
-from PIL import Image, ImageOps
-import pytesseract
+import cv2
+import numpy as np
 
-# Configure Tesseract executable path
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Define the region to capture (x, y, width, height)
+CARD_REGION = (1200, 980, 200, 120)  # Example region for both cards
+CARD_SPLIT_X = 1275  # Midpoint to split the region into two cards
 
-def capture_player_cards():
+# Path to your templates
+TEMPLATES = {
+    # Card Numbers
+    "a": "Cards/14.png",
+    "k": "Cards/13.png",
+    "q": "Cards/12.png",
+    "j": "Cards/11.png",
+    "10": "Cards/10.png",
+    "9": "Cards/9.png",
+    "8": "Cards/8.png",
+    "7": "Cards/7.png",
+    "6": "Cards/6.png",
+    "5": "Cards/5.png",
+    "4": "Cards/4.png",
+    "3": "Cards/3.png",
+    "2": "Cards/2.png",
+    # Suits
+    "s": "Suits/Spade.png",
+    "h": "Suits/Heart.png",
+    "d": "Suits/Diamond.png",
+    "c": "Suits/Club.png",
+}
+
+
+def capture_region():
     """
-    Capture the region where the player's cards are located and extract text.
-    Returns:
-        str: Extracted text representing the player's cards.
+    Capture the defined region of the screen and return it as a NumPy array.
     """
-    # Define the region for player's cards (x, y, width, height)
-    left = 1200
-    top = 980
-    width = 200
-    height = 120
+    screenshot = pyautogui.screenshot(region=CARD_REGION)
+    return cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
 
-    print(f"Capturing player cards from region: ({left}, {top}, {width}, {height})")
-    # Capture a screenshot of the card region
-    screenshot = pyautogui.screenshot(region=(left, top, width, height))
-    
-    # Save the raw region for debugging
-    raw_image_path = "debug_raw_card_region.png"
-    screenshot.save(raw_image_path)
-    print(f"Raw screenshot saved to '{raw_image_path}' for verification.")
-    
-    # Preprocess the image
-    processed_image = preprocess_image(screenshot)
-    
-    # Save the preprocessed region for debugging
-    processed_image_path = "debug_preprocessed_card_region.png"
-    processed_image.save(processed_image_path)
-    print(f"Preprocessed screenshot saved to '{processed_image_path}' for verification.")
-    
-    # Use Tesseract to extract text
-    print("Extracting text from the card region...")
-    custom_config = r'-c tessedit_char_whitelist=AKQJ1098765432♠♥♦♣ --psm 6'
-    card_text = pytesseract.image_to_string(processed_image, config=custom_config)
-    
-    return card_text.strip()
 
-def preprocess_image(image):
+def match_template(image, template_path):
     """
-    Preprocess the image to enhance OCR accuracy.
-    Args:
-        image (Image): The PIL Image object to preprocess.
-    Returns:
-        Image: The preprocessed image.
+    Perform template matching to find the best match in the image.
     """
-    print("Preprocessing the image...")
-    # Convert to grayscale
-    grayscale = ImageOps.grayscale(image)
-    
-    # Resize for better OCR (optional, doubles the size)
-    resized = grayscale.resize((grayscale.width * 2, grayscale.height * 2), Image.Resampling.LANCZOS)
-    
-    # Apply binary thresholding
-    processed = resized.point(lambda x: 0 if x < 128 else 255, '1')
-    return processed
+    template = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
+    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    result = cv2.matchTemplate(image_gray, template, cv2.TM_CCOEFF_NORMED)
+    _, max_val, _, _ = cv2.minMaxLoc(result)
+    return max_val
 
-def main():
-    # Capture and extract your cards
-    player_cards = capture_player_cards()
-    print(f"Your Cards: {player_cards}")
 
-if __name__ == "__main__":
-    main()
+def analyze_card(card_image):
+    """
+    Analyze a single card image to detect its rank and suit.
+    """
+    detected_rank, detected_suit = None, None
+    highest_rank_confidence, highest_suit_confidence = 0, 0
+
+    for label, template_path in TEMPLATES.items():
+        confidence = match_template(card_image, template_path)
+        if label in "akqj1098765432" and confidence > highest_rank_confidence:
+            detected_rank = label
+            highest_rank_confidence = confidence
+        elif label in "shdc" and confidence > highest_suit_confidence:
+            detected_suit = label
+            highest_suit_confidence = confidence
+
+    return detected_rank, detected_suit
+
+
+def analyze_region():
+    """
+    Analyze the captured region, splitting it into two cards and detecting ranks and suits.
+    """
+    image = capture_region()
+    left_card = image[:, :CARD_SPLIT_X - CARD_REGION[0]]
+    right_card = image[:, CARD_SPLIT_X - CARD_REGION[0]:]
+
+    left_rank, left_suit = analyze_card(left_card)
+    right_rank, right_suit = analyze_card(right_card)
+
+    return {"left": (left_rank, left_suit), "right": (right_rank, right_suit)}
