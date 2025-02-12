@@ -19,15 +19,13 @@ def generate_odds():
         # Detect or manually input community cards
         if auto_detect_var.get():
             first_card = analyze_first_community_card(save_debug_image=True)  # Save debug images
-            if first_card:
-                community_cards = [first_card]
-            else:
-                raise ValueError("Failed to detect the first community card. Check debug images.")
+            community_cards = [first_card] if first_card else []
         else:
             community_cards_input = community_cards_entry.get().strip()
-            community_cards = (
-                [card.strip().lower() for card in community_cards_input.split(",")] if community_cards_input else []
-            )
+            community_cards = [card.strip().lower() for card in community_cards_input.split(",")] if community_cards_input else []
+
+        # Ensure no None values appear
+        community_cards = [card for card in community_cards if card]
 
         # Run the simulation
         output = simulate_poker_round(player_cards, num_opponents=num_opponents, community_cards=community_cards)
@@ -37,25 +35,33 @@ def generate_odds():
         win_line = next((line for line in lines if "Win Probability" in line), None)
         lose_line = next((line for line in lines if "Lose Probability" in line), None)
 
-        # Simplify the probabilities (extract only percentages)
-        win_prob = win_line.split(":")[1].split("%")[0].strip() + "%" if win_line else "N/A"
-        lose_prob = lose_line.split(":")[1].split("%")[0].strip() + "%" if lose_line else "N/A"
+        # Extract numbers even if format varies
+        def extract_probability(line):
+            if not line:
+                return "N/A"
+            try:
+                return line.split(":")[1].strip()
+            except IndexError:
+                return "N/A"
 
-        # Display detected player cards, detected community card, win probability, and lose probability
+        win_prob = extract_probability(win_line)
+        lose_prob = extract_probability(lose_line)
+
+        # Display detected player cards, detected community cards, win probability, and lose probability
         output_label.config(
-            text=f"Detected Cards: {', '.join(player_cards).upper()}\n"
-                 f"Community Card: {', '.join(community_cards).upper() if community_cards else 'None'}\n"
-                 f"Win Probability: {win_prob}\n"
-                 f"Lose Probability: {lose_prob}"
+            text=f"🎴 Detected Cards: {', '.join(player_cards).upper()}\n"
+                 f"🃏 Community Cards: {', '.join(community_cards).upper() if community_cards else 'None'}\n"
+                 f"✅ Win Probability: {win_prob}\n"
+                 f"❌ Lose Probability: {lose_prob}"
         )
 
     except Exception as e:
-        output_label.config(text=f"Error: {e}")
+        output_label.config(text=f"⚠️ Error: {e}")
 
 # Initialize the main GUI window
 window = tk.Tk()
 window.title("Poker Odds Generator")
-window.geometry("300x250")  # Slightly larger to accommodate the checkbox
+window.geometry("350x500")  # Slightly larger to accommodate the checkbox
 window.configure(bg="#121212")  # Dark mode background
 
 # Add a title label
@@ -67,7 +73,7 @@ opponent_label = tk.Label(window, text="Opponents:", font=("Helvetica", 10), fg=
 opponent_label.pack(pady=2)
 opponent_input = tk.Entry(window, font=("Helvetica", 10), width=5, bg="#1E1E1E", fg="#FFFFFF", insertbackground="#FFFFFF")
 opponent_input.pack()
-opponent_input.insert(0, "3")  # Default value
+opponent_input.insert(0, "8")  # Default value
 
 # Add input for community cards
 community_cards_label = tk.Label(window, text="Community Cards:", font=("Helvetica", 10), fg="#FFFFFF", bg="#121212")
@@ -93,6 +99,9 @@ generate_button.pack(pady=10)
 # Add a label to display detected player cards and win/lose probabilities
 output_label = tk.Label(window, text="", font=("Helvetica", 10), justify="center", fg="#FFFFFF", bg="#121212")
 output_label.pack(pady=5)
+
+# Automatically focus on the opponent input field on startup
+window.after(100, lambda: opponent_input.focus())
 
 # Start the GUI event loop
 window.mainloop()
