@@ -5,6 +5,7 @@ from screen_analyzer import analyze_region, analyze_first_community_card
 # Seed the random number generator for reproducibility
 np.random.seed(420)
 
+
 def get_player_cards():
     """
     Use screen_analyzer to detect the player's cards.
@@ -25,7 +26,10 @@ def get_player_cards():
             f"{right_card[0]}{right_suit}".lower(),
         ]
 
-    raise ValueError("Failed to detect both player cards. Check the screen region and templates.")
+    raise ValueError(
+        "Failed to detect both player cards. Check the screen region and templates."
+    )
+
 
 def simulate_poker_round(player_cards, num_opponents=3, community_cards=[]):
     """
@@ -34,12 +38,18 @@ def simulate_poker_round(player_cards, num_opponents=3, community_cards=[]):
     output = []
     try:
         # Ensure valid player cards
-        if not player_cards or any(card is None or "?" in card for card in player_cards):
-            raise ValueError("Invalid player cards detected. Suit detection may have failed.")
+        if not player_cards or any(
+            card is None or "?" in card for card in player_cards
+        ):
+            raise ValueError(
+                "Invalid player cards detected. Suit detection may have failed."
+            )
 
         # Convert to pied_poker card objects
         player_cards_objects = pp.card.Card.of(*player_cards)
-        community_cards_objects = pp.card.Card.of(*community_cards) if community_cards else []
+        community_cards_objects = (
+            pp.card.Card.of(*community_cards) if community_cards else []
+        )
 
         output.append(f"Detected Player Cards: {player_cards}")
 
@@ -58,21 +68,28 @@ def simulate_poker_round(player_cards, num_opponents=3, community_cards=[]):
 
         # Get probabilities
         p1 = players[0]
-        win_prob = simulation_result.probability_of(pp.probability.events.PlayerWins(p1))
-        lose_prob = simulation_result.probability_of(pp.probability.events.PlayerLoses(p1))
+        win_prob = simulation_result.probability_of(
+            pp.probability.events.PlayerWins(p1)
+        )
+        lose_prob = simulation_result.probability_of(
+            pp.probability.events.PlayerLoses(p1)
+        )
 
         output.append(f"Win Probability: {str(win_prob)}")
         output.append(f"Lose Probability: {str(lose_prob)}")
 
         # Opponent probabilities
         for opponent in players[1:]:
-            opp_win_prob = simulation_result.probability_of(pp.probability.events.PlayerWins(opponent))
+            opp_win_prob = simulation_result.probability_of(
+                pp.probability.events.PlayerWins(opponent)
+            )
             output.append(f"🤼 {opponent.name} - Win Probability: {str(opp_win_prob)}")
 
     except Exception as e:
         return f"Error during simulation: {e}"
 
     return "\n".join(output)
+
 
 def main():
     try:
@@ -82,17 +99,19 @@ def main():
 
         # Test community card detection
         first_card = analyze_first_community_card(save_debug_image=True)
-        
+
         if first_card:
             print(f"Detected First Community Card: {first_card}")
         else:
-            print("Failed to detect the first community card. Running simulation without it.")
+            print(
+                "Failed to detect the first community card. Running simulation without it."
+            )
 
         # Simulate the round if detection was successful
         results = simulate_poker_round(
-            player_cards, 
-            num_opponents=3, 
-            community_cards=[first_card] if first_card else []
+            player_cards,
+            num_opponents=3,
+            community_cards=[first_card] if first_card else [],
         )
         print(results)
 
@@ -100,6 +119,7 @@ def main():
         print(f"ValueError: {e}")
     except Exception as e:
         print(f"Unhandled error: {e}")
+
 
 if __name__ == "__main__":
     main()

@@ -9,10 +9,10 @@ COMMUNITY_REGION = (950, 670, 700, 125)  # Example region for community cards
 
 # Approximate HSV color ranges for a 4-color deck
 SUIT_HSV_RANGES = {
-    "h": ([0, 100, 50], [10, 255, 255]),    # Hearts (Deep Red)
-    "c": ([40, 50, 50], [90, 255, 255]),    # Clubs (Green)
+    "h": ([0, 100, 50], [10, 255, 255]),  # Hearts (Deep Red)
+    "c": ([40, 50, 50], [90, 255, 255]),  # Clubs (Green)
     "d": ([100, 50, 50], [140, 255, 255]),  # Diamonds (Blue)
-    "s": ([0, 0, 0], [180, 50, 70])         # Spades (Black)
+    "s": ([0, 0, 0], [180, 50, 70]),  # Spades (Black)
 }
 
 # Path to rank templates (Numbers/Letters)
@@ -32,17 +32,21 @@ RANK_TEMPLATES = {
     "2": "Cards/2.png",
 }
 
+
 def capture_region(region):
-    """ Capture the specified region of the screen and return it as a NumPy array. """
+    """Capture the specified region of the screen and return it as a NumPy array."""
     screenshot = pyautogui.screenshot(region=region)
     return cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+
 
 def detect_suit_by_color(card_image, save_debug=False):
     """
     Detect the suit of a card based on its dominant color using HSV filtering.
     """
     height, width, _ = card_image.shape
-    suit_region = card_image[int(height * 0.55):, int(width * 0.30):int(width * 0.70)]  # Adjusted suit crop
+    suit_region = card_image[
+        int(height * 0.55) :, int(width * 0.30) : int(width * 0.70)
+    ]  # Adjusted suit crop
 
     # Convert to HSV
     hsv = cv2.cvtColor(suit_region, cv2.COLOR_BGR2HSV)
@@ -68,6 +72,7 @@ def detect_suit_by_color(card_image, save_debug=False):
 
     return detected_suit
 
+
 def match_template(image, template_path):
     """
     Perform template matching to identify a card rank.
@@ -75,13 +80,16 @@ def match_template(image, template_path):
         float: Confidence score of the best match.
     """
     template = cv2.imread(template_path, 0)  # Load template in grayscale
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # Convert card image to grayscale
+    gray_image = cv2.cvtColor(
+        image, cv2.COLOR_BGR2GRAY
+    )  # Convert card image to grayscale
 
     # Match template (TM_CCOEFF_NORMED gives best accuracy)
     result = cv2.matchTemplate(gray_image, template, cv2.TM_CCOEFF_NORMED)
     _, max_val, _, _ = cv2.minMaxLoc(result)  # Get best match confidence
 
     return max_val
+
 
 def analyze_card(card_image, save_debug=False):
     """
@@ -105,19 +113,21 @@ def analyze_card(card_image, save_debug=False):
 
     return detected_rank, detected_suit
 
+
 def analyze_region():
     """
     Analyze the captured region, splitting it into two cards and detecting ranks and suits.
     """
     image = capture_region(CARD_REGION)
-    left_card = image[:, :CARD_SPLIT_X - CARD_REGION[0]]
-    right_card = image[:, CARD_SPLIT_X - CARD_REGION[0]:]
+    left_card = image[:, : CARD_SPLIT_X - CARD_REGION[0]]
+    right_card = image[:, CARD_SPLIT_X - CARD_REGION[0] :]
 
     # Extract separate suit regions for each card
     left_rank, left_suit = analyze_card(left_card, save_debug=True)
     right_rank, right_suit = analyze_card(right_card, save_debug=True)
 
     return {"left": (left_rank, left_suit), "right": (right_rank, right_suit)}
+
 
 def analyze_first_community_card(save_debug_image=False):
     """
