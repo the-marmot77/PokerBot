@@ -10,6 +10,7 @@ Computer-vision helper that reads an online poker table, detects hole/community 
 | `pokerbot/simulator.py` | Orchestrates detection + pied-poker simulations and exposes a CLI-friendly API. |
 | `pokerbot/gui.py` | Tkinter front-end to run simulations, choose opponent counts, and toggle community-card auto-detect. |
 | `tests.py` | Standalone debug script that grabs predefined regions via `mss` and logs the detected cards. |
+| `artifacts/` | Collected debug outputs: rank/suit crops, suit masks, palette references (`Colors*.png`). |
 | `Cards/`, `Suits/` | Rank templates and suit color references. |
 | `debug_screenshots/` | Saved crops from failed detections (safe to delete when not needed). |
 
